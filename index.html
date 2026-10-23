@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>出席ノート｜スタジオ・ステップ（デモ）</title>
+<meta name="description" content="習い事教室向けの生徒・出席管理アプリのデモです。スマホで出欠をつけて、月ごとの出席率を自動で集計します。">
+<meta name="theme-color" content="#2f6fdf">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --ink: #1f2a44;
+    --muted: #6b7690;
+    --line: #e3e7f0;
+    --brand: #2f6fdf;
+    --brand-soft: #e6eefc;
+    --ok: #1f9d63;
+    --ok-soft: #e2f5ec;
+    --late: #d98a00;
+    --late-soft: #fff2d6;
+    --ng: #d9443f;
+    --ng-soft: #fde6e5;
+    --mk: #7a55d6;
+    --mk-soft: #efe9fc;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font-family: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", sans-serif;
+    line-height: 1.6; padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+
+  /* ヘッダー */
+  header { background: var(--brand); color: #fff; padding: 14px 0 18px; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand b { font-size: 18px; font-weight: 800; letter-spacing: .02em; }
+  .brand small { display: block; font-size: 12px; opacity: .85; margin-top: -2px; }
+  .demo-pill { font-size: 11px; background: rgba(255, 255, 255, .2); padding: 3px 10px; border-radius: 99px; white-space: nowrap; }
+
+  h2 { font-size: 18px; margin: 22px 0 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+  .muted { color: var(--muted); font-size: 13px; }
+
+  /* クラスの切り替え */
+  .chips { display: flex; gap: 8px; overflow-x: auto; padding: 14px 0 4px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip {
+    flex: none; border: 1px solid var(--line); background: var(--card); padding: 8px 14px; border-radius: 99px;
+    font-size: 14px; cursor: pointer; white-space: nowrap;
+  }
+  .chip[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  /* 日付の切り替え */
+  .datebar { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+  .datebar .now { flex: 1; text-align: center; }
+  .datebar .now b { font-size: 20px; display: block; }
+  .icon-btn {
+    width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--card);
+    font-size: 20px; cursor: pointer; display: grid; place-items: center;
+  }
+  .icon-btn:disabled { opacity: .35; cursor: default; }
+
+  /* 出欠の集計バー */
+  .tally { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+  .tally div { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px; text-align: center; }
+  .tally b { display: block; font-size: 22px; line-height: 1.2; }
+  .tally span { font-size: 12px; color: var(--muted); }
+
+  /* 生徒ごとの出欠 */
+  .roster { display: grid; gap: 10px; }
+  .row { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; }
+  .row-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .avatar {
+    width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; flex: none;
+    background: var(--brand-soft); color: var(--brand); font-weight: 800;
+  }
+  .row-top .name { font-weight: 700; }
+  .row-top .kana { font-size: 12px; color: var(--muted); }
+  .flag { margin-left: auto; font-size: 11px; color: var(--ng); background: var(--ng-soft); padding: 2px 8px; border-radius: 99px; }
+  .status { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .status button {
+    border: 1px solid var(--line); background: #fafbfe; border-radius: 10px; padding: 10px 0; font-size: 14px;
+    cursor: pointer; font-weight: 700; color: var(--muted);
+  }
+  .status button[data-v="present"][aria-pressed="true"] { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
+  .status button[data-v="late"][aria-pressed="true"] { background: var(--late-soft); border-color: var(--late); color: var(--late); }
+  .status button[data-v="absent"][aria-pressed="true"] { background: var(--ng-soft); border-color: var(--ng); color: var(--ng); }
+  .status button[data-v="makeup"][aria-pressed="true"] { background: var(--mk-soft); border-color: var(--mk); color: var(--mk); }
+
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+  .btn {
+    border: 0; border-radius: 12px; padding: 12px 16px; font-weight: 700; cursor: pointer; font-size: 15px;
+    background: var(--brand); color: #fff;
+  }
+  .btn.ghost { background: var(--card); color: var(--brand); border: 1px solid var(--line); }
+  .btn.danger { background: var(--card); color: var(--ng); border: 1px solid var(--line); }
+  .btn.block { width: 100%; }
+
+  /* 生徒一覧 */
+  .tools { display: flex; gap: 8px; margin-bottom: 12px; }
+  .tools input, .tools select, .field input, .field select, .field textarea {
+    width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; background: var(--card);
+  }
+  .tools select { width: auto; }
+  .list { display: grid; gap: 8px; }
+  .list button.item {
+    display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; cursor: pointer;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px;
+  }
+  .item .meta { flex: 1; min-width: 0; }
+  .item .meta small { display: block; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .rate { font-weight: 800; font-size: 15px; }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 99px; background: var(--brand-soft); color: var(--brand); margin-left: 6px; vertical-align: 1px; }
+
+  /* 集計 */
+  .monthbar { display: flex; align-items: center; gap: 10px; margin: 14px 0; }
+  .monthbar b { flex: 1; text-align: center; font-size: 18px; }
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .kpis div { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+  .kpis b { display: block; font-size: 24px; line-height: 1.2; }
+  .kpis span { font-size: 12px; color: var(--muted); }
+  .bars { display: grid; gap: 12px; }
+  .bar-row .lbl { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; }
+  .bar { height: 12px; border-radius: 99px; background: #edf0f6; overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 99px; background: var(--brand); }
+  .alert { display: flex; gap: 10px; align-items: flex-start; background: var(--ng-soft); border: 1px solid #f6c9c7; border-radius: 14px; padding: 12px; margin-bottom: 8px; font-size: 14px; }
+  .alert b { color: var(--ng); }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--card); }
+  .table-wrap { padding: 8px; }
+  th, td { padding: 10px 5px; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { font-size: 12px; color: var(--muted); font-weight: 500; }
+  @media (max-width: 420px) { table .tag { display: none; } } /* スマホでは表の右端が切れないようクラス名を省く */
+
+  /* 下のタブ */
+  nav.tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(255, 255, 255, .96);
+    border-top: 1px solid var(--line); backdrop-filter: blur(8px);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  nav.tabs .wrap { display: grid; grid-template-columns: repeat(3, 1fr); }
+  nav.tabs button {
+    border: 0; background: none; padding: 10px 0 12px; display: grid; justify-items: center; gap: 2px;
+    font-size: 12px; color: var(--muted); cursor: pointer;
+  }
+  nav.tabs button svg { width: 24px; height: 24px; }
+  nav.tabs button[aria-selected="true"] { color: var(--brand); font-weight: 700; }
+
+  /* 生徒の編集 */
+  dialog { border: 0; border-radius: 20px; padding: 0; width: min(520px, calc(100% - 24px)); }
+  dialog::backdrop { background: rgba(20, 28, 48, .45); }
+  .sheet { padding: 20px; }
+  .sheet h3 { margin: 0 0 14px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .sheet .actions { justify-content: flex-end; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 99px; font-size: 14px; opacity: 0;
+    transition: .25s ease; pointer-events: none; z-index: 30; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .empty { text-align: center; color: var(--muted); padding: 28px 0; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 28px 16px 8px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap head">
+    <div class="brand">
+      <svg width="36" height="36" viewBox="0 0 40 40" aria-hidden="true">
+        <rect width="40" height="40" rx="11" fill="#fff"/>
+        <rect x="10" y="9" width="20" height="24" rx="3" fill="#e6eefc" stroke="#2f6fdf" stroke-width="2"/>
+        <path d="M14 17l3 3 6-6M14 26h12" stroke="#2f6fdf" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div><b>出席ノート</b><small>スタジオ・ステップ（キッズダンス教室）</small></div>
+    </div>
+    <span class="demo-pill">デモ版</span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- 出欠をつける -->
+  <section id="view-attend">
+    <div class="chips" id="class-chips"></div>
+    <div class="datebar">
+      <button class="icon-btn" id="prev-day" aria-label="前のレッスン">‹</button>
+      <div class="now"><b id="lesson-date"></b><span class="muted" id="lesson-info"></span></div>
+      <button class="icon-btn" id="next-day" aria-label="次のレッスン">›</button>
+    </div>
+    <div class="tally" id="tally"></div>
+    <div class="roster" id="roster"></div>
+    <div class="actions">
+      <button class="btn ghost" id="all-present">未入力をすべて「出席」にする</button>
+    </div>
+  </section>
+
+  <!-- 生徒 -->
+  <section id="view-students" hidden>
+    <h2>生徒一覧</h2>
+    <div class="tools">
+      <input type="search" id="search" placeholder="名前・ふりがなで探す">
+      <select id="filter-class" aria-label="クラスで絞りこむ"></select>
+    </div>
+    <div class="list" id="student-list"></div>
+    <div class="actions"><button class="btn block" id="add-student">＋ 生徒を追加する</button></div>
+  </section>
+
+  <!-- 集計 -->
+  <section id="view-report" hidden>
+    <div class="monthbar">
+      <button class="icon-btn" id="prev-month" aria-label="前の月">‹</button>
+      <b id="month-label"></b>
+      <button class="icon-btn" id="next-month" aria-label="次の月">›</button>
+    </div>
+    <div class="kpis" id="kpis"></div>
+
+    <h2>気になる生徒</h2>
+    <div id="alerts"></div>
+
+    <h2>クラスごとの出席率</h2>
+    <div class="card bars" id="class-bars"></div>
+
+    <h2>生徒ごとの出席</h2>
+    <div class="card table-wrap"><table id="student-table"></table></div>
+    <div class="actions">
+      <button class="btn ghost" id="export-csv">この月の出席表をダウンロード（CSV）</button>
+      <button class="btn danger" id="reset">デモを最初の状態に戻す</button>
+    </div>
+  </section>
+
+  <footer>※ これは業務用Webアプリ制作のデモです。教室・生徒はすべて架空です。<br>入力した内容は、このブラウザの中だけに保存されます。</footer>
+</main>
+
+<nav class="tabs" role="tablist">
+  <div class="wrap">
+    <button role="tab" aria-selected="true" data-view="attend">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 11l3 3 5-5"/></svg>出欠
+    </button>
+    <button role="tab" aria-selected="false" data-view="students">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.6c2.6-.3 4.8 1.2 5.5 4.4"/></svg>生徒
+    </button>
+    <button role="tab" aria-selected="false" data-view="report">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>集計
+    </button>
+  </div>
+</nav>
+
+<dialog id="student-dialog">
+  <form class="sheet" method="dialog" id="student-form">
+    <h3 id="dialog-title">生徒を追加</h3>
+    <div class="field"><label for="f-name">名前</label><input id="f-name" required placeholder="例：山田 ひなた"></div>
+    <div class="field"><label for="f-kana">ふりがな</label><input id="f-kana" placeholder="例：やまだ ひなた"></div>
+    <div class="field"><label for="f-class">クラス</label><select id="f-class"></select></div>
+    <div class="field"><label for="f-guardian">保護者の連絡先</label><input id="f-guardian" placeholder="例：母　000-0000-0000"></div>
+    <div class="field"><label for="f-memo">メモ</label><textarea id="f-memo" rows="2" placeholder="例：発表会に参加予定"></textarea></div>
+    <div class="actions">
+      <button type="button" class="btn danger" id="delete-student" hidden>退会にする</button>
+      <button type="button" class="btn ghost" id="cancel-dialog">やめる</button>
+      <button type="submit" class="btn" id="save-student">保存する</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const KEY = 'studio-step-demo-v1';
+  const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
+  const STATUS = {
+    present: '出席',
+    late: '遅刻',
+    absent: '欠席',
+    makeup: '振替',
+  };
+
+  const CLASSES = [
+    { id: 'kids', name: 'キッズ', detail: '年長〜小2', day: 1, time: '16:30' },
+    { id: 'junior', name: 'ジュニア', detail: '小3〜小6', day: 3, time: '17:30' },
+    { id: 'teens', name: 'ティーンズ', detail: '中学生', day: 5, time: '19:00' },
+    { id: 'adult', name: '大人ビギナー', detail: '一般', day: 6, time: '10:00' },
+  ];
+
+  const DEMO_STUDENTS = [
+    ['山田 ひなた', 'やまだ ひなた', 'kids'], ['佐藤 そうた', 'さとう そうた', 'kids'],
+    ['鈴木 こはる', 'すずき こはる', 'kids'], ['高橋 れん', 'たかはし れん', 'kids'],
+    ['田中 ゆい', 'たなか ゆい', 'junior'], ['伊藤 はると', 'いとう はると', 'junior'],
+    ['渡辺 さくら', 'わたなべ さくら', 'junior'], ['中村 りく', 'なかむら りく', 'junior'],
+    ['小林 めい', 'こばやし めい', 'junior'], ['加藤 あおい', 'かとう あおい', 'teens'],
+    ['吉田 そら', 'よしだ そら', 'teens'], ['山本 まな', 'やまもと まな', 'teens'],
+    ['松本 ゆか', 'まつもと ゆか', 'adult'], ['井上 たける', 'いのうえ たける', 'adult'],
+  ];
+
+  /* ───────── 日付の道具 ───────── */
+  const pad = n => String(n).padStart(2, '0');
+  const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const today = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+  const label = s => { const d = parse(s); return `${d.getMonth() + 1}月${d.getDate()}日（${WEEK[d.getDay()]}）`; };
+
+  // そのクラスのレッスン日（今日以前で最新の日）
+  function latestLesson(cls, from = today()) {
+    const d = new Date(from);
+    while (d.getDay() !== cls.day) d.setDate(d.getDate() - 1);
+    return ymd(d);
+  }
+  function shiftLesson(dateStr, weeks) {
+    const d = parse(dateStr);
+    d.setDate(d.getDate() + weeks * 7);
+    return ymd(d);
+  }
+  function lessonsInMonth(cls, y, m) {
+    const out = [];
+    const d = new Date(y, m, 1);
+    while (d.getMonth() === m) {
+      if (d.getDay() === cls.day && d <= today()) out.push(ymd(d));
+      d.setDate(d.getDate() + 1);
+    }
+    return out;
+  }
+
+  /* ───────── 保存（このブラウザの中だけ） ───────── */
+  function demoState() {
+    const students = DEMO_STUDENTS.map(([name, kana, classId], i) => ({
+      id: 's' + (i + 1), name, kana, classId,
+      guardian: i < 12 ? `保護者　000-0000-${pad(i + 1)}00` : '本人',
+      memo: i === 2 ? '12月の発表会に参加予定' : '', active: true,
+    }));
+    const attendance = {};
+    let seed = 7;
+    const rand = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+    CLASSES.forEach(cls => {
+      // 直近のレッスンは未入力のまま残し（開いてすぐ試せるように）、それより前の8回分に記録を入れる
+      const date = shiftLesson(latestLesson(cls), -1);
+      for (let w = 0; w < 8; w++) {
+        const day = shiftLesson(date, -w);
+        students.filter(s => s.classId === cls.id).forEach(s => {
+          const r = rand();
+          let v = r < 0.8 ? 'present' : r < 0.88 ? 'late' : r < 0.96 ? 'absent' : 'makeup';
+          if (s.id === 's7' && w < 2) v = 'absent'; // 「2回続けて欠席」の例
+          attendance[`${day}|${s.id}`] = v;
+        });
+      }
+    });
+    return { students, attendance, nextId: students.length + 1 };
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) { /* 保存できない環境でも動かす */ }
+    return demoState();
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* 保存できなくても続ける */ }
+  }
+
+  let state = load();
+  let currentClass = CLASSES[0].id;
+  let currentDate = latestLesson(CLASSES[0]);
+  let reportMonth = (() => { const d = today(); return { y: d.getFullYear(), m: d.getMonth() }; })();
+  let editingId = null;
+
+  const $ = id => document.getElementById(id);
+  const clsOf = id => CLASSES.find(c => c.id === id);
+  const activeStudents = classId => state.students.filter(s => s.active && (!classId || s.classId === classId));
+  const initial = name => name.trim().charAt(0);
+
+  function toast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => t.classList.remove('show'), 1800);
+  }
+
+  // 直近のレッスンで2回続けて欠席している生徒
+  function absentStreak(s) {
+    const cls = clsOf(s.classId);
+    let date = latestLesson(cls);
+    if (!state.attendance[`${date}|${s.id}`]) date = shiftLesson(date, -1);
+    let n = 0;
+    while (state.attendance[`${date}|${s.id}`] === 'absent') { n++; date = shiftLesson(date, -1); }
+    return n;
+  }
+
+  /* ───────── 出欠をつける画面 ───────── */
+  function renderChips() {
+    $('class-chips').innerHTML = CLASSES.map(c =>
+      `<button class="chip" aria-pressed="${c.id === currentClass}" data-id="${c.id}">${c.name}（${WEEK[c.day]}）</button>`
+    ).join('');
+  }
+
+  function renderAttend() {
+    renderChips();
+    const cls = clsOf(currentClass);
+    $('lesson-date').textContent = label(currentDate);
+    $('lesson-info').textContent = `${cls.name}クラス（${cls.detail}）${cls.time}〜`;
+    $('next-day').disabled = parse(shiftLesson(currentDate, 1)) > today();
+
+    const list = activeStudents(currentClass);
+    const counts = { present: 0, late: 0, absent: 0, makeup: 0 };
+    list.forEach(s => { const v = state.attendance[`${currentDate}|${s.id}`]; if (v) counts[v]++; });
+    const left = list.length - Object.values(counts).reduce((a, b) => a + b, 0);
+    $('tally').innerHTML = `
+      <div><b style="color:var(--ok)">${counts.present + counts.makeup}</b><span>出席・振替</span></div>
+      <div><b style="color:var(--late)">${counts.late}</b><span>遅刻</span></div>
+      <div><b style="color:var(--ng)">${counts.absent}</b><span>欠席</span></div>
+      <div><b>${left}</b><span>未入力</span></div>`;
+
+    $('roster').innerHTML = list.length ? list.map(s => {
+      const v = state.attendance[`${currentDate}|${s.id}`];
+      const streak = absentStreak(s);
+      return `<div class="row">
+        <div class="row-top">
+          <span class="avatar">${initial(s.name)}</span>
+          <div><div class="name">${esc(s.name)}</div><div class="kana">${esc(s.kana || '')}</div></div>
+          ${streak >= 2 ? `<span class="flag">${streak}回続けて欠席</span>` : ''}
+        </div>
+        <div class="status">${Object.entries(STATUS).map(([k, t]) =>
+          `<button data-sid="${s.id}" data-v="${k}" aria-pressed="${v === k}">${t}</button>`).join('')}
+        </div>
+      </div>`;
+    }).join('') : `<div class="empty">このクラスには生徒がいません</div>`;
+  }
+
+  $('class-chips').addEventListener('click', e => {
+    const b = e.target.closest('.chip');
+    if (!b) return;
+    currentClass = b.dataset.id;
+    currentDate = latestLesson(clsOf(currentClass));
+    renderAttend();
+  });
+  $('prev-day').addEventListener('click', () => { currentDate = shiftLesson(currentDate, -1); renderAttend(); });
+  $('next-day').addEventListener('click', () => { currentDate = shiftLesson(currentDate, 1); renderAttend(); });
+  $('roster').addEventListener('click', e => {
+    const b = e.target.closest('button[data-sid]');
+    if (!b) return;
+    const key = `${currentDate}|${b.dataset.sid}`;
+    if (state.attendance[key] === b.dataset.v) delete state.attendance[key]; // もう一度押すと取り消し
+    else state.attendance[key] = b.dataset.v;
+    save();
+    renderAttend();
+  });
+  $('all-present').addEventListener('click', () => {
+    let n = 0;
+    activeStudents(currentClass).forEach(s => {
+      const key = `${currentDate}|${s.id}`;
+      if (!state.attendance[key]) { state.attendance[key] = 'present'; n++; }
+    });
+    save();
+    renderAttend();
+    toast(n ? `${n}人を「出席」にしました` : '未入力の生徒はいません');
+  });
+
+  /* ───────── 生徒の画面 ───────── */
+  function rateOf(s, y, m) {
+    const days = lessonsInMonth(clsOf(s.classId), y, m);
+    const marks = days.map(d => state.attendance[`${d}|${s.id}`]).filter(Boolean);
+    if (!marks.length) return null;
+    return marks.filter(v => v !== 'absent').length / marks.length;
+  }
+
+  function renderStudents() {
+    $('filter-class').innerHTML = `<option value="">すべてのクラス</option>` +
+      CLASSES.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    $('filter-class').value = renderStudents.filter || '';
+    const q = ($('search').value || '').trim();
+    const list = activeStudents(renderStudents.filter)
+      .filter(s => !q || s.name.includes(q) || (s.kana || '').includes(q));
+    const { y, m } = reportMonth;
+    $('student-list').innerHTML = list.length ? list.map(s => {
+      const r = rateOf(s, y, m);
+      return `<button class="item" data-id="${s.id}">
+        <span class="avatar">${initial(s.name)}</span>
+        <span class="meta"><b>${esc(s.name)}</b><span class="tag">${clsOf(s.classId).name}</span>
+          <small>${esc(s.memo || s.guardian || '')}</small></span>
+        <span class="rate" style="color:${r === null ? 'var(--muted)' : r < 0.7 ? 'var(--ng)' : 'var(--ok)'}">${r === null ? '—' : Math.round(r * 100) + '%'}</span>
+      </button>`;
+    }).join('') : `<div class="empty">見つかりませんでした</div>`;
+  }
+
+  $('search').addEventListener('input', renderStudents);
+  $('filter-class').addEventListener('change', e => { renderStudents.filter = e.target.value; renderStudents(); });
+  $('student-list').addEventListener('click', e => {
+    const b = e.target.closest('.item');
+    if (b) openDialog(b.dataset.id);
+  });
+  $('add-student').addEventListener('click', () => openDialog(null));
+
+  function openDialog(id) {
+    editingId = id;
+    const s = id ? state.students.find(x => x.id === id) : { name: '', kana: '', classId: renderStudents.filter || CLASSES[0].id, guardian: '', memo: '' };
+    $('dialog-title').textContent = id ? '生徒の情報' : '生徒を追加';
+    $('f-class').innerHTML = CLASSES.map(c => `<option value="${c.id}">${c.name}（${WEEK[c.day]} ${c.time}）</option>`).join('');
+    $('f-name').value = s.name;
+    $('f-kana').value = s.kana || '';
+    $('f-class').value = s.classId;
+    $('f-guardian').value = s.guardian || '';
+    $('f-memo').value = s.memo || '';
+    $('delete-student').hidden = !id;
+    $('student-dialog').showModal();
+  }
+  $('cancel-dialog').addEventListener('click', () => $('student-dialog').close());
+  $('student-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const data = {
+      name: $('f-name').value.trim(), kana: $('f-kana').value.trim(), classId: $('f-class').value,
+      guardian: $('f-guardian').value.trim(), memo: $('f-memo').value.trim(),
+    };
+    if (!data.name) return;
+    if (editingId) Object.assign(state.students.find(x => x.id === editingId), data);
+    else state.students.push({ id: 's' + state.nextId++, active: true, ...data });
+    save();
+    $('student-dialog').close();
+    renderStudents();
+    toast(editingId ? '保存しました' : `${data.name} さんを追加しました`);
+  });
+  $('delete-student').addEventListener('click', () => {
+    const s = state.students.find(x => x.id === editingId);
+    if (!confirm(`${s.name} さんを退会にしますか？（これまでの出席の記録は残ります）`)) return;
+    s.active = false;
+    save();
+    $('student-dialog').close();
+    renderStudents();
+    toast('退会にしました');
+  });
+
+  /* ───────── 集計の画面 ───────── */
+  function monthData(y, m) {
+    return CLASSES.map(cls => {
+      const days = lessonsInMonth(cls, y, m);
+      const rows = activeStudents(cls.id).map(s => {
+        const c = { present: 0, late: 0, absent: 0, makeup: 0 };
+        days.forEach(d => { const v = state.attendance[`${d}|${s.id}`]; if (v) c[v]++; });
+        const marked = c.present + c.late + c.absent + c.makeup;
+        return { s, c, marked, rate: marked ? (marked - c.absent) / marked : null };
+      });
+      const marked = rows.reduce((a, r) => a + r.marked, 0);
+      const attended = rows.reduce((a, r) => a + r.marked - r.c.absent, 0);
+      return { cls, days, rows, marked, attended, rate: marked ? attended / marked : null };
+    });
+  }
+
+  function renderReport() {
+    const { y, m } = reportMonth;
+    $('month-label').textContent = `${y}年${m + 1}月`;
+    const now = today();
+    $('next-month').disabled = y > now.getFullYear() || (y === now.getFullYear() && m >= now.getMonth());
+    const data = monthData(y, m);
+
+    const lessons = data.reduce((a, d) => a + d.days.length, 0);
+    const marked = data.reduce((a, d) => a + d.marked, 0);
+    const attended = data.reduce((a, d) => a + d.attended, 0);
+    $('kpis').innerHTML = `
+      <div><b>${lessons}</b><span>レッスン回数</span></div>
+      <div><b>${marked ? Math.round(attended / marked * 100) : 0}<small style="font-size:14px">%</small></b><span>全体の出席率</span></div>
+      <div><b>${activeStudents().length}</b><span>在籍生徒</span></div>`;
+
+    const alerts = activeStudents().map(s => ({ s, n: absentStreak(s) })).filter(a => a.n >= 2);
+    $('alerts').innerHTML = alerts.length ? alerts.map(({ s, n }) =>
+      `<div class="alert"><span>⚠️</span><div><b>${esc(s.name)} さん</b>（${clsOf(s.classId).name}）が <b>${n}回続けて欠席</b> しています。<br><span class="muted">保護者の方に様子を聞いてみましょう：${esc(s.guardian || '連絡先未登録')}</span></div></div>`
+    ).join('') : `<div class="card muted">続けて休んでいる生徒はいません。</div>`;
+
+    $('class-bars').innerHTML = data.map(d => {
+      const pct = d.rate === null ? 0 : Math.round(d.rate * 100);
+      return `<div class="bar-row"><div class="lbl"><span>${d.cls.name}（${WEEK[d.cls.day]}）・${d.days.length}回</span><b>${d.rate === null ? '—' : pct + '%'}</b></div>
+        <div class="bar"><i style="width:${pct}%;background:${pct < 80 ? 'var(--late)' : 'var(--brand)'}"></i></div></div>`;
+    }).join('');
+
+    $('student-table').innerHTML = `<thead><tr><th>生徒</th><th>出席</th><th>遅刻</th><th>欠席</th><th>振替</th><th>出席率</th></tr></thead><tbody>` +
+      data.flatMap(d => d.rows).map(r => `<tr>
+        <td>${esc(r.s.name)}<span class="tag">${clsOf(r.s.classId).name}</span></td>
+        <td>${r.c.present}</td><td>${r.c.late}</td><td style="color:${r.c.absent ? 'var(--ng)' : 'inherit'}">${r.c.absent}</td><td>${r.c.makeup}</td>
+        <td><b style="color:${r.rate !== null && r.rate < 0.7 ? 'var(--ng)' : 'inherit'}">${r.rate === null ? '—' : Math.round(r.rate * 100) + '%'}</b></td>
+      </tr>`).join('') + `</tbody>`;
+  }
+
+  $('prev-month').addEventListener('click', () => { const d = new Date(reportMonth.y, reportMonth.m - 1, 1); reportMonth = { y: d.getFullYear(), m: d.getMonth() }; renderReport(); });
+  $('next-month').addEventListener('click', () => { const d = new Date(reportMonth.y, reportMonth.m + 1, 1); reportMonth = { y: d.getFullYear(), m: d.getMonth() }; renderReport(); });
+
+  $('export-csv').addEventListener('click', () => {
+    const { y, m } = reportMonth;
+    const lines = [['クラス', '生徒', 'ふりがな', '出席', '遅刻', '欠席', '振替', '出席率']];
+    monthData(y, m).forEach(d => d.rows.forEach(r => lines.push([
+      d.cls.name, r.s.name, r.s.kana || '', r.c.present, r.c.late, r.c.absent, r.c.makeup,
+      r.rate === null ? '' : Math.round(r.rate * 100) + '%',
+    ])));
+    const csv = '﻿' + lines.map(l => l.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = `出席表_${y}年${m + 1}月.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('出席表をダウンロードしました');
+  });
+
+  $('reset').addEventListener('click', () => {
+    if (!confirm('入力した内容を消して、デモを最初の状態に戻しますか？')) return;
+    state = demoState();
+    save();
+    renderAll();
+    toast('最初の状態に戻しました');
+  });
+
+  /* ───────── タブ ───────── */
+  const views = { attend: renderAttend, students: renderStudents, report: renderReport };
+  document.querySelector('nav.tabs').addEventListener('click', e => {
+    const b = e.target.closest('button[data-view]');
+    if (!b) return;
+    document.querySelectorAll('nav.tabs button').forEach(t => t.setAttribute('aria-selected', t === b));
+    Object.keys(views).forEach(k => { $('view-' + k).hidden = k !== b.dataset.view; });
+    views[b.dataset.view]();
+    window.scrollTo(0, 0);
+  });
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function renderAll() { renderAttend(); renderStudents(); renderReport(); }
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
